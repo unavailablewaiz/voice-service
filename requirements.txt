@@ -1,6 +1,5 @@
-fastapi
-uvicorn
+flask
 transformers
 torch
-soundfile
-python-multipart
+pillow
+requests
