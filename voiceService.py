@@ -1,22 +1,30 @@
-from fastapi import FastAPI, UploadFile, File
+from flask import Flask, request, jsonify
 from transformers import pipeline
-import tempfile, os
 
-app = FastAPI()
+app = Flask(__name__)
 
-asr = pipeline(
-    "automatic-speech-recognition",
-    model="openai/whisper-tiny",
-    device=-1
+pipe = pipeline(
+    "image-text-to-text",
+    model="HuggingFaceTB/SmolVLM-256M-Instruct",
+    device="cpu"
 )
 
-@app.post("/transcribe")
-async def transcribe(file: UploadFile = File(...)):
-    with tempfile.NamedTemporaryFile(delete=False) as f:
-        f.write(await file.read())
-        path = f.name
+@app.route("/analyze", methods=["POST"])
+def analyze():
+    data = request.json
 
-    text = asr(path)["text"]
-    os.remove(path)
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "image", "url": data["image_url"]},
+                {"type": "text", "text": data["question"]}
+            ]
+        }
+    ]
 
-    return {"text": text}
+    result = pipe(text=messages)
+    return jsonify(result)
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000)
