@@ -1,30 +1,34 @@
+import os
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 from flask import Flask, request, jsonify
 from transformers import pipeline
 
 app = Flask(__name__)
 
-pipe = pipeline(
-    "image-text-to-text",
-    model="HuggingFaceTB/SmolVLM-256M-Instruct",
-    device="cpu"
-)
+pipe = None
 
-@app.route("/analyze", methods=["POST"])
-def analyze():
+def get_model():
+    global pipe
+    if pipe is None:
+        pipe = pipeline(
+            "image-to-text",
+            model="nlpconnect/vit-gpt2-image-captioning",
+            device=-1
+        )
+    return pipe
+
+@app.route("/caption", methods=["POST"])
+def caption():
     data = request.json
+    image_url = data["image_url"]
 
-    messages = [
-        {
-            "role": "user",
-            "content": [
-                {"type": "image", "url": data["image_url"]},
-                {"type": "text", "text": data["question"]}
-            ]
-        }
-    ]
+    pipe = get_model()
+    result = pipe(image_url)
 
-    result = pipe(text=messages)
-    return jsonify(result)
+    return jsonify({
+        "caption": result[0]["generated_text"]
+    })
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)
